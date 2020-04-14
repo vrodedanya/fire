@@ -61,7 +61,6 @@ void draw_particles(SDL_Renderer* renderer, Particle* p)
 			green =  pow(p[i].t, 2);
 			SDL_SetRenderDrawColor(renderer, 255, green, 0, 0);
 			SDL_RenderDrawPoint(renderer, p[i].x, p[i].y);
-			//SDL_RenderDrawLine(renderer, p[i].x, p[i].y, p[i + 1].x, p[i + 1].y);
 		}
 	}
 }
@@ -85,7 +84,6 @@ void move_particles(Particle* p, SDL_Event event, double delta)
 					
 			speed = delta * p[i].t * 2;
 			p[i].y -= speed;
-			printf("%d %d\n",event.motion.x,event.motion.y);
 			if (sqrt(pow(p[i].x - event.motion.x,2) + pow(p[i].y - event.motion.y,2) <= 900))
 			{
 				if (p[i].x > event.motion.x)
