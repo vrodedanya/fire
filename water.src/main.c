@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#define GRAVITY 9.8
+#define GRAVITY 500
 #define PARTICLE_SIZE 20
 
 
@@ -13,9 +13,14 @@ typedef struct
 	SDL_Rect rect;
 	double x;
 	double y;
+	int way_x;
+	int way_y;
 	int energy;
+	int pressure;
+	int side_pressure;
 	double speed_x;
 	double speed_y;
+	unsigned short isMovable;
 }Particles;
 
 Particles* p = NULL;
@@ -62,31 +67,105 @@ void move(double delta)
 		Particles ghost;
 		ghost.rect.w = p[i].rect.w;
 		ghost.rect.h = p[i].rect.h;
+		int add_y = p[i].speed_y * delta >= 1 ? p[i].speed_y * delta : 1;
+		int add_x = p[i].speed_x * delta >= 1 ? p[i].speed_x * delta : 1;
+
 		// Creating 4 variables for check free space in all directions
 		ghost.rect.y = p[i].rect.y;
-		ghost.rect.x = p[i].rect.x + 1;
+		ghost.rect.x = p[i].rect.x + add_x;
 		Particles* check_right = check_space(ghost,i);
-		ghost.rect.x = p[i].rect.x - 1;
+		ghost.rect.x = p[i].rect.x - add_x;
 		Particles* check_left = check_space(ghost,i);
 		ghost.rect.x = p[i].rect.x;
-		ghost.rect.y = p[i].rect.y + 1;
+		ghost.rect.y = p[i].rect.y + add_y;
 		Particles* check_down = check_space(ghost,i);
-		ghost.rect.y = p[i].rect.y - 1;
+		ghost.rect.y = p[i].rect.y - add_y;
 		Particles* check_up = check_space(ghost,i);
 		// Gravitation	
 		if (check_down == NULL && p[i].rect.y < 450)
 		{
-			p[i].speed_y++;
+			p[i].speed_y += 2 * GRAVITY * delta;
 		}
-		else
+		else if (check_down == NULL)
 		{
+			p[i].energy = p[i].speed_y * 0.5;
 			p[i].speed_y = 0;
 			p[i].y = p[i].rect.y;
+			
+			
+		}
+		else if (p[i].rect.y < 450)
+		{
+			if (check_down->speed_y == 0)
+			{
+				p[i].energy = p[i].speed_y * 0.5;
+				p[i].speed_y = 0;
+				p[i].y = p[i].rect.y;
+			}
+			else
+			{
+				check_down->speed_y = (check_down->speed_y + p[i].speed_y ) / 2; 
+				p[i].speed_y = check_down->speed_y;
+			}
 		}
 
-		// Pressure
-		if (check_up == NULL)
+		if (check_right == NULL && check_left == NULL)
 		{
+			p[i].isMovable = 0;
+		}
+		// Pressure
+		if (check_up != NULL || p[i].isMovable == 1)
+		{
+			p[i].speed_x += 1;
+			if (p[i].way_x == 0)
+			{
+				if (check_right == NULL && check_left == NULL || check_left != NULL && check_right != NULL)
+				{
+					if (rand()%2 == 1) p[i].way_x = 1;
+					else p[i].way_x = -1;
+				}
+				else if (check_right == NULL)
+				{
+					p[i].way_x = 1;
+				}
+				else
+				{
+					p[i].way_x = -1;
+				}
+			}
+			if (check_right != NULL && p[i].way_x == 1)
+			{
+				check_right->isMovable = 1;
+				check_right->way_x = 1;
+			}
+			if (check_left != NULL && p[i].way_x == -1)
+			{
+				check_left->isMovable = 1;
+				check_left->way_x = -1;
+			}
+		}
+		else if (p[i].isMovable == 0)
+		{
+			p[i].way_x = 0;
+			p[i].speed_x = 0;
+			if (check_right != NULL)
+			{
+				check_right->isMovable = 0;
+			}
+		}
+	
+		// Energy
+
+		// Motion
+		if (check_up == NULL && p[i].speed_y < 0 || check_down == NULL && p[i].speed_y > 0)
+		{
+			p[i].y += p[i].speed_y * delta;
+			p[i].rect.y = p[i].y;
+		}
+		if (check_right == NULL && p[i].speed_x > 0 && p[i].rect.x + p[i].rect.w <= 500 || check_left == NULL && p[i].speed_x < 0 && p[i].rect.x >= 0)
+		{
+			p[i].x += p[i].speed_x * p[i].way_x * delta;
+			p[i].rect.x = p[i].x;
 		}
 	}
 }
@@ -125,7 +204,12 @@ int main()
 				particle.rect.x = particle.x = event.motion.x - PARTICLE_SIZE / 2;
 				particle.rect.y = particle.y = event.motion.y - PARTICLE_SIZE / 2;
 
-				particle.energy = 450 - event.motion.y;
+				particle.isMovable = 0;
+				particle.way_y = 0;
+				particle.way_x = 0;
+				particle.energy = 0;
+				particle.pressure = 0;
+				particle.side_pressure = 0;
 				particle.speed_x = 0;
 				particle.speed_y = 0;
 				push(particle);
