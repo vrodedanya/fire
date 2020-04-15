@@ -5,7 +5,7 @@
 #include <math.h>
 
 #define GRAVITY 9.8
-#define PARTICLE_SIZE 10
+#define PARTICLE_SIZE 20
 
 
 typedef struct
@@ -50,48 +50,41 @@ void draw_particles(SDL_Renderer* renderer)
 	for (register int i = 0 ; i < SIZE ; ++i)
 	{
 		SDL_SetRenderDrawColor(renderer, 0, 0, 255, 0);
-		SDL_RenderFillRect(renderer,&p[i].rect);
+		SDL_RenderDrawRect(renderer,&p[i].rect);
 	}
 }
 
+// The function perfom all motions of objects (a fall and e.t.c.)
 void move(double delta)
 {
 	for (register int i = 0 ; i < SIZE ; ++i)
 	{
-		p[i].x += p[i].speed_x * delta;
-		p[i].y += p[i].speed_y * delta;
-		p[i].rect.x = p[i].x;
-		p[i].rect.y = p[i].y;
-		
 		Particles ghost;
 		ghost.rect.w = p[i].rect.w;
 		ghost.rect.h = p[i].rect.h;
-
-		ghost.rect.x = p[i].x + p[i].speed_x * delta;
-		ghost.rect.y = p[i].y;
-		Particles* check_x = check_space(ghost, i); 
-
-		ghost.rect.x = p[i].x;
-		ghost.rect.y = p[i].y + p[i].speed_y * delta;
-		Particles* check_y = check_space(ghost, i); 
-
-		if (p[i].rect.y < 450 && check_y == NULL)
+		// Creating 4 variables for check free space in all directions
+		ghost.rect.y = p[i].rect.y;
+		ghost.rect.x = p[i].rect.x + 1;
+		Particles* check_right = check_space(ghost,i);
+		ghost.rect.x = p[i].rect.x - 1;
+		Particles* check_left = check_space(ghost,i);
+		ghost.rect.x = p[i].rect.x;
+		ghost.rect.y = p[i].rect.y + 1;
+		Particles* check_down = check_space(ghost,i);
+		ghost.rect.y = p[i].rect.y - 1;
+		Particles* check_up = check_space(ghost,i);
+		// Gravitation	
+		if (check_down == NULL && p[i].rect.y < 450)
 		{
-			p[i].speed_y += pow(GRAVITY, 3) * delta;
+			p[i].speed_y++;
 		}
 		else
 		{
 			p[i].speed_y = 0;
+			p[i].y = p[i].rect.y;
 		}
-		if (check_y != NULL)
-		{
-			check_y->pressure++;
-		}
-		if (check_x == NULL)
-		{
-			if (p[i].pressure > 0) p[i].speed_x += (-p[i].pressure + rand()%p[i].pressure) * delta;
-			printf("%d %d\n",i,p[i].pressure);
-		}
+
+		// Pressure
 	}
 }
 
@@ -103,6 +96,7 @@ int main()
 
 	SDL_Event event;
 
+	srand(time(NULL));
 
 	time_t start_time = clock(),stop_time = clock();
 	double delta;
@@ -128,7 +122,7 @@ int main()
 				particle.rect.x = particle.x = event.motion.x - PARTICLE_SIZE / 2;
 				particle.rect.y = particle.y = event.motion.y - PARTICLE_SIZE / 2;
 
-				particle.pressure = 0;
+				particle.pressure = rand()%5;
 				particle.speed_x = 0;
 				particle.speed_y = 0;
 				push(particle);
