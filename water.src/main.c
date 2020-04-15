@@ -13,7 +13,7 @@ typedef struct
 	SDL_Rect rect;
 	double x;
 	double y;
-	int pressure;
+	int energy;
 	double speed_x;
 	double speed_y;
 }Particles;
@@ -85,6 +85,9 @@ void move(double delta)
 		}
 
 		// Pressure
+		if (check_up == NULL)
+		{
+		}
 	}
 }
 
@@ -122,7 +125,7 @@ int main()
 				particle.rect.x = particle.x = event.motion.x - PARTICLE_SIZE / 2;
 				particle.rect.y = particle.y = event.motion.y - PARTICLE_SIZE / 2;
 
-				particle.pressure = rand()%5;
+				particle.energy = 450 - event.motion.y;
 				particle.speed_x = 0;
 				particle.speed_y = 0;
 				push(particle);
