@@ -5,7 +5,7 @@
 #include <math.h>
 #include <time.h>
 
-#define PART_QUANT 640
+#define PART_QUANT 1500
 #define THREADS 8
 
 typedef struct
@@ -125,7 +125,7 @@ void* check_environment(void* thread_data)
 
 int main()
 {
-	SDL_Window* window = SDL_CreateWindow("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 415, 500, SDL_WINDOW_SHOWN);
+	SDL_Window* window = SDL_CreateWindow("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_FULLSCREEN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
 	SDL_Event event;
@@ -148,19 +148,8 @@ int main()
 	double time_start = clock(), time_end = clock() + 10;
 	double delta;
 
-	while(1)
-	{
-		SDL_SetRenderDrawColor(renderer,0,0,0,0);
-		SDL_RenderClear(renderer);
-		SDL_RenderPresent(renderer);
-
-		if(SDL_PollEvent(&event))
-		{
-			if(event.type == SDL_KEYDOWN) break;
-		}
-	}
-
-	while(1)
+	int isWork = 1;
+	while(isWork)
 	{
 		delta = (time_end - time_start) / CLOCKS_PER_SEC;
 		time_start = clock();
@@ -176,14 +165,14 @@ int main()
 			pthread_join(th[i], NULL);
 		}
 
-		spawn_particles(particles, 207, 500, 100, 10, 0);
+		spawn_particles(particles, 1920 / 2, 1080, 500, 50, 0);
 		move_particles(particles, event, delta);
 		draw_particles(renderer,particles);
 		
-		if (SDL_PollEvent(&event))
+		while (SDL_PollEvent(&event))
 		{
-			if (event.type == SDL_KEYDOWN) return 0;
-			if (event.type == SDL_QUIT) return 0;
+			if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) isWork = 0;
+			if (event.type == SDL_QUIT) isWork = 0;
 		}
 		SDL_RenderPresent(renderer);
 		time_end = clock();

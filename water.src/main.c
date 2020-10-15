@@ -20,7 +20,6 @@ typedef struct
 	int side_pressure;
 	double speed_x;
 	double speed_y;
-	unsigned short isMovable;
 }Particles;
 
 Particles* p = NULL;
@@ -86,19 +85,15 @@ void move(double delta)
 		{
 			p[i].speed_y += 2 * GRAVITY * delta;
 		}
-		else if (check_down == NULL)
+		else if (check_down == NULL) // floor
 		{
-			p[i].energy = p[i].speed_y * 0.5;
 			p[i].speed_y = 0;
 			p[i].y = p[i].rect.y;
-			
-			
 		}
-		else if (p[i].rect.y < 450)
+		else if (p[i].rect.y < 450) // other particle
 		{
 			if (check_down->speed_y == 0)
 			{
-				p[i].energy = p[i].speed_y * 0.5;
 				p[i].speed_y = 0;
 				p[i].y = p[i].rect.y;
 			}
@@ -109,51 +104,53 @@ void move(double delta)
 			}
 		}
 
-		if (check_right == NULL && check_left == NULL)
+		printf("Number: %d\n",i);
+		printf("Dir: %d\n",p[i].way_x);
+		printf("Speed: %f\n",p[i].speed_x);
+		printf("Energy: %d\n\n",p[i].energy);	
+		if (check_up != NULL)
 		{
-			p[i].isMovable = 0;
-		}
-		// Pressure
-		if (check_up != NULL || p[i].isMovable == 1)
-		{
-			p[i].speed_x += 1;
 			if (p[i].way_x == 0)
 			{
-				if (check_right == NULL && check_left == NULL || check_left != NULL && check_right != NULL)
-				{
-					if (rand()%2 == 1) p[i].way_x = 1;
-					else p[i].way_x = -1;
-				}
-				else if (check_right == NULL)
-				{
-					p[i].way_x = 1;
-				}
-				else
+				if (check_left == NULL)
 				{
 					p[i].way_x = -1;
 				}
+				else
+				{
+					p[i].way_x = 1;
+				}
+				p[i].speed_x=20;
 			}
-			if (check_right != NULL && p[i].way_x == 1)
+			else
 			{
-				check_right->isMovable = 1;
-				check_right->way_x = 1;
-			}
-			if (check_left != NULL && p[i].way_x == -1)
-			{
-				check_left->isMovable = 1;
-				check_left->way_x = -1;
+				if (check_left != NULL && p[i].way_x == -1)
+				{
+					check_left->energy++;
+					check_left->way_x = -1;
+					check_left->speed_x = 20;
+				}
+				else if (check_right != NULL && p[i].way_x == 1)
+				{
+					check_right->energy++;
+					check_right->way_x = 1;
+					check_right->speed_x = 20;
+				}
 			}
 		}
-		else if (p[i].isMovable == 0)
+		else
 		{
-			p[i].way_x = 0;
-			p[i].speed_x = 0;
-			if (check_right != NULL)
+			if (p[i].energy <= 0)
 			{
-				check_right->isMovable = 0;
+				p[i].way_x = 0;
+				p[i].speed_x = 0;
+				p[i].energy = 0;
+			}
+			else
+			{
+				p[i].energy--;
 			}
 		}
-	
 		// Energy
 
 		// Motion
@@ -162,7 +159,8 @@ void move(double delta)
 			p[i].y += p[i].speed_y * delta;
 			p[i].rect.y = p[i].y;
 		}
-		if (check_right == NULL && p[i].speed_x > 0 && p[i].rect.x + p[i].rect.w <= 500 || check_left == NULL && p[i].speed_x < 0 && p[i].rect.x >= 0)
+		if ((check_right == NULL && p[i].way_x == 1 || check_left == NULL && p[i].way_x == -1) && 
+			p[i].rect.x + p[i].rect.w <= 500 && p[i].rect.x >= 0)
 		{
 			p[i].x += p[i].speed_x * p[i].way_x * delta;
 			p[i].rect.x = p[i].x;
@@ -204,7 +202,6 @@ int main()
 				particle.rect.x = particle.x = event.motion.x - PARTICLE_SIZE / 2;
 				particle.rect.y = particle.y = event.motion.y - PARTICLE_SIZE / 2;
 
-				particle.isMovable = 0;
 				particle.way_y = 0;
 				particle.way_x = 0;
 				particle.energy = 0;
