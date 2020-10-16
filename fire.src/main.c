@@ -6,7 +6,7 @@
 #include <time.h>
 
 #define PART_QUANT 1500
-#define THREADS 8
+#define THREADS 128
 
 typedef struct
 {
@@ -59,6 +59,7 @@ void draw_particles(SDL_Renderer* renderer, Particle* p)
 		if (p[i].t > 0)
 		{
 			green =  pow(p[i].t, 2);
+			if (green > 255) green = 255;
 			SDL_SetRenderDrawColor(renderer, 255, green, 0, 0);
 			SDL_RenderDrawPoint(renderer, p[i].x, p[i].y);
 		}
@@ -81,7 +82,6 @@ void move_particles(Particle* p, SDL_Event event, double delta)
 	{
 		if (p[i].t > 0)
 		{	
-					
 			speed = delta * p[i].t * 2;
 			p[i].y -= speed;
 			if (sqrt(pow(p[i].x - event.motion.x,2) + pow(p[i].y - event.motion.y,2) <= 900))
@@ -112,7 +112,7 @@ void* check_environment(void* thread_data)
 		for (register int j = 0 ; j < PART_QUANT ; ++j)
 		{
 			if (i == j) continue;
-			if (sqrt(pow(data->p[i].x - data->p[j].x, 2) + pow(data->p[i].y - data->p[j].y, 2) <= 7))
+			if (sqrt(pow(data->p[i].x - data->p[j].x, 2) + pow(data->p[i].y - data->p[j].y, 2) <= 30))
 			{
 				++data->p[i].e;
 			}
@@ -165,13 +165,18 @@ int main()
 			pthread_join(th[i], NULL);
 		}
 
-		spawn_particles(particles, 1920 / 2, 1080, 500, 50, 0);
+		spawn_particles(particles, 1920 / 2, 1080, 400, 10, 0);
 		move_particles(particles, event, delta);
 		draw_particles(renderer,particles);
 		
 		while (SDL_PollEvent(&event))
 		{
 			if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) isWork = 0;
+			if (event.type == SDL_MOUSEBUTTONDOWN)
+			{
+				if (event.button.button == SDL_BUTTON_LEFT) SDL_ShowCursor(0);
+				else SDL_ShowCursor(1);
+			}
 			if (event.type == SDL_QUIT) isWork = 0;
 		}
 		SDL_RenderPresent(renderer);
