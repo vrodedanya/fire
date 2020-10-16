@@ -185,7 +185,6 @@ int main()
 		}
 		SDL_RenderPresent(renderer);
 		dt.end();
-		std::cout << 1 / DeltaTime::delta << std::endl;
 	}
 	return 0;
 }
