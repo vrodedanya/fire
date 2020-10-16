@@ -4,8 +4,8 @@
 #include <cmath>
 #include "DeltaTime.h"
 
-#define PART_QUANT 4000
-#define THREADS 4
+#define PART_QUANT 3000
+#define THREADS 10
 
 typedef struct
 {
@@ -29,22 +29,22 @@ typedef struct
 	SDL_Renderer* renderer;
 }render_storage;
 
-void spawn_particles(Particle* p, const int& center_x, const int& center_y, const int& radius_x, const int& radius_y, const int& exclude_radius)
+void spawn_particles(particle_storage* data, const int& center_x, const int& center_y, const int& radius_x, const int& radius_y, const int& exclude_radius)
 {
 	register int radius_buffer = 0;
 	register double angle;
-	for (register int i = 0 ; i < PART_QUANT ; ++i)
+	for (register int i = data->start ; i < data->end ; ++i)
 	{
-		if (p[i].y <= 0 || p[i].t <= 0)
+		if (data->p[i].y <= 0 || data->p[i].t <= 0)
 		{
 			angle = rand()%365 * 0.0174;
 			
 			if (radius_x != 0) radius_buffer = exclude_radius + rand()%radius_x;
-			p[i].x = center_x + cos(angle) * radius_buffer;
+			data->p[i].x = center_x + cos(angle) * radius_buffer;
 			if (radius_y != 0) radius_buffer = exclude_radius + rand()%radius_y;
-			p[i].y = center_y + sin(angle) * radius_buffer;
+			data->p[i].y = center_y + sin(angle) * radius_buffer;
 
-			p[i].t = 20;
+			data->p[i].t = 20;
 		}
 		else continue;
 	}
@@ -81,7 +81,7 @@ void move_particles(particle_storage* data, const SDL_Event& event)
 	{
 		if (data->p[i].t > 0)
 		{	
-			speed = DeltaTime::delta * data->p[i].t * 5;
+			speed = DeltaTime::delta * data->p[i].t * 6;
 			data->p[i].y -= speed;
 			if (sqrt(pow(data->p[i].x - event.motion.x,2) + pow(data->p[i].y - event.motion.y,2) <= 900))
 			{
@@ -151,10 +151,15 @@ int main()
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 		SDL_RenderClear(renderer);	
+
 		for (int i = 0 ; i < THREADS ; i++)
 		{
 			threads[i] = std::thread(check_environment, &pd[i]);
-
+		}
+		for (int i = 0 ; i < THREADS ; i++)
+		{
+			threads[i].join();
+			threads[i] = std::thread(spawn_particles, &pd[i], 1920 / 2, 1080, 600, 30, 0);
 		}
 		for (int i = 0 ; i < THREADS ; i++)
 		{
@@ -166,7 +171,6 @@ int main()
 			threads[i].join();
 		}
 
-		spawn_particles(particles, 1920 / 2, 1080, 960, 30, 0);
 		draw_particles(renderer, particles);
 		
 		while (SDL_PollEvent(&event))
@@ -181,6 +185,7 @@ int main()
 		}
 		SDL_RenderPresent(renderer);
 		dt.end();
+		std::cout << 1 / DeltaTime::delta << std::endl;
 	}
 	return 0;
 }
