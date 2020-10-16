@@ -4,8 +4,8 @@
 #include <cmath>
 #include "DeltaTime.h"
 
-#define PART_QUANT 3000
-#define THREADS 10
+#define PART_QUANT 4800
+#define THREADS 12
 
 typedef struct
 {
@@ -81,7 +81,7 @@ void move_particles(particle_storage* data, const SDL_Event& event)
 	{
 		if (data->p[i].t > 0)
 		{	
-			speed = DeltaTime::delta * data->p[i].t * 6;
+			speed = DeltaTime::delta * (30 + data->p[i].t) * 9;
 			data->p[i].y -= speed;
 			if (sqrt(pow(data->p[i].x - event.motion.x,2) + pow(data->p[i].y - event.motion.y,2) <= 900))
 			{
