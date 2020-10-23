@@ -19,7 +19,7 @@ CFLAGS := -Wall -O2 -g -pthread
 # Linker flags (ex: -g )
 LDFLAGS := -g -pthread
 # Libs (ex: -lm, -lncurses, -lSDL2)
-LIBS := -lSDL2 -lm 
+LIBS := -lSDL2 -lm -lSDL2_mixer 
 # Defines (ex: -D DEBUG, -Dcount=5)
 DEF := -D DEBUG
 # Directories with source code (ex: source)

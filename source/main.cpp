@@ -3,6 +3,7 @@
 #include <SDL2/SDL.h>
 #include <cmath>
 #include "DeltaTime.h"
+#include <SDL2/SDL_mixer.h>
 
 #define PART_QUANT 4800
 #define THREADS 12
@@ -122,6 +123,12 @@ void check_environment(particle_storage* data)
 
 int main()
 {
+	SDL_Init(SDL_INIT_EVERYTHING);
+	SDL_Init(SDL_INIT_AUDIO);
+	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
+	Mix_Music* mus = Mix_LoadMUS("../sound/fire.mp3");
+	if (mus == 0) return 1;
+
 	SDL_Window* window = SDL_CreateWindow("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_FULLSCREEN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
@@ -147,7 +154,11 @@ int main()
 	bool isWork = true;
 	while(isWork)
 	{
-		dt.begin();
+		dt.begin();	
+		if (Mix_PlayingMusic() == 0)
+		{
+			Mix_PlayMusic(mus, 1);
+		}
 
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 		SDL_RenderClear(renderer);	
