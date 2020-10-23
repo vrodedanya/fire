@@ -121,6 +121,31 @@ void check_environment(particle_storage* data)
 	}
 }
 
+void event_handler(SDL_Event& event, bool& isWork)
+{
+	while (1)
+	{
+		while (SDL_PollEvent(&event))
+		{
+			if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE)
+			{
+				isWork = false;
+				return;
+			}
+			if (event.type == SDL_MOUSEBUTTONDOWN)
+			{
+				if (event.button.button == SDL_BUTTON_LEFT) SDL_ShowCursor(0);
+				else SDL_ShowCursor(1);
+			}
+			if (event.type == SDL_QUIT)
+			{	   
+				isWork = false;
+				return;
+			}
+		}
+	}
+}
+
 int main()
 {
 	SDL_Init(SDL_INIT_EVERYTHING);
@@ -152,6 +177,7 @@ int main()
 	DeltaTime dt;
 
 	bool isWork = true;
+	std::thread handler(event_handler, std::ref(event), std::ref(isWork));
 	while(isWork)
 	{
 		dt.begin();	
@@ -184,20 +210,10 @@ int main()
 
 		draw_particles(renderer, particles);
 		
-		while (SDL_PollEvent(&event))
-		{
-			if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE) isWork = false;
-			if (event.type == SDL_MOUSEBUTTONDOWN)
-			{
-				if (event.button.button == SDL_BUTTON_LEFT) SDL_ShowCursor(0);
-				else SDL_ShowCursor(1);
-			}
-			if (event.type == SDL_QUIT) isWork = false;
-		}
 		SDL_RenderPresent(renderer);
 		dt.end();
 	}
-
+	handler.join();
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
