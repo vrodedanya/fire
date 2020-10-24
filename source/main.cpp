@@ -6,7 +6,6 @@
 #include <SDL2/SDL_mixer.h>
 
 #define PART_QUANT 4800
-#define THREADS 12
 
 typedef struct
 {
@@ -164,14 +163,16 @@ int main()
 	Particle particles[PART_QUANT];
 	init_particles(particles);
 
-	std::thread threads[THREADS];
+	unsigned int threads_count = std::thread::hardware_concurrency();
 
-	particle_storage pd[THREADS];
-	for (int i = 0 ; i < THREADS ; ++i)
+	std::thread threads[threads_count];
+
+	particle_storage pd[threads_count];
+	for (unsigned int i = 0 ; i < threads_count ; ++i)
 	{
 		pd[i].p = particles;
-		pd[i].start = i * PART_QUANT / THREADS;
-		pd[i].end = (i + 1) * PART_QUANT / THREADS;
+		pd[i].start = i * PART_QUANT / threads_count;
+		pd[i].end = (i + 1) * PART_QUANT / threads_count;
 	}
 
 	DeltaTime dt;
@@ -189,21 +190,21 @@ int main()
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 		SDL_RenderClear(renderer);	
 
-		for (int i = 0 ; i < THREADS ; i++)
+		for (unsigned int i = 0 ; i < threads_count ; i++)
 		{
 			threads[i] = std::thread(check_environment, &pd[i]);
 		}
-		for (int i = 0 ; i < THREADS ; i++)
+		for (unsigned int i = 0 ; i < threads_count ; i++)
 		{
 			threads[i].join();
 			threads[i] = std::thread(spawn_particles, &pd[i], 1920 / 2, 1080, 600, 30, 0);
 		}
-		for (int i = 0 ; i < THREADS ; i++)
+		for (unsigned int i = 0 ; i < threads_count ; i++)
 		{
 			threads[i].join();
 			threads[i] = std::thread(move_particles, &pd[i], event);
 		}
-		for (int i = 0 ; i < THREADS ; i++)
+		for (unsigned int i = 0 ; i < threads_count ; i++)
 		{
 			threads[i].join();
 		}
