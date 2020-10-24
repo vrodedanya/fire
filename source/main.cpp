@@ -23,12 +23,6 @@ typedef struct
 
 }particle_storage;
 
-typedef struct
-{
-	particle_storage pd;
-	SDL_Renderer* renderer;
-}render_storage;
-
 void spawn_particles(particle_storage* data, const int& center_x, const int& center_y, const int& radius_x, const int& radius_y, const int& exclude_radius)
 {
 	register int radius_buffer = 0;
