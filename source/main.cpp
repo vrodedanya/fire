@@ -1,118 +1,165 @@
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include <iostream>
 #include <thread>
-#include <SDL2/SDL.h>
 #include <cmath>
 #include "dbhelper.h"
-#include <SDL2/SDL_mixer.h>
+#include <vector>
 
-#define PART_QUANT 4800
-
-typedef struct
+class Particle
 {
+private:
+public:
+	Particle()
+	{
+		x = -1;
+		y = -1;
+		y = 0;
+	}
 	double x;
 	double y;
-	int t;
-	int e;
-}Particle;
-
-typedef struct
+	double t;
+};
+class Manager
 {
-	Particle* p;
-	int start;
-	int end;
-
-}particle_storage;
-
-void spawn_particles(particle_storage* data, const int& center_x, const int& center_y, const int& radius_x, const int& radius_y, const int& exclude_radius)
-{
-	register int radius_buffer = 0;
-	register double angle;
-	for (register int i = data->start ; i < data->end ; ++i)
+private:
+	unsigned int threads_count;
+	std::vector<Particle*> particles;
+public:
+	Manager(unsigned count)
 	{
-		if (data->p[i].y <= 0 || data->p[i].t <= 0)
+		for (unsigned i = 0 ; i < count ; i++)
 		{
-			angle = rand()%365 * 0.0174;
-			
-			if (radius_x != 0) radius_buffer = exclude_radius + rand()%radius_x;
-			data->p[i].x = center_x + cos(angle) * radius_buffer;
-			if (radius_y != 0) radius_buffer = exclude_radius + rand()%radius_y;
-			data->p[i].y = center_y + sin(angle) * radius_buffer;
-
-			data->p[i].t = 20;
+			Particle* buf = new Particle;
+			particles.emplace_back(buf);
 		}
-		else continue;
+		threads_count = std::thread::hardware_concurrency();
 	}
-}
-
-void draw_particles(SDL_Renderer* renderer, Particle* p)
-{
-	register unsigned char green;
-	for (register int i = 0 ; i < PART_QUANT ; ++i)
+	~Manager()
 	{
-		if (p[i].t > 0)
+		for (unsigned i = 0 ; i < particles.size() ; i++)
 		{
-			green =  pow(p[i].t, 2);
-			if (green > 255) green = 255;
-			SDL_SetRenderDrawColor(renderer, 255, green, 0, 0);
-			SDL_RenderDrawPoint(renderer, p[i].x, p[i].y);
+			delete particles[i];
 		}
 	}
-}
-
-void init_particles(Particle* p)
-{
-	for (int i = 0 ; i < PART_QUANT ; ++i)
+	void spawn_part(int begin, int end, const int& center_x, const int& center_y, const int& radius_x, const int& radius_y, const int& exclude_radius)
 	{
-		p[i].x = -1;
-		p[i].y = -1;
-	}
-}
-
-void move_particles(particle_storage* data, const SDL_Event& event)
-{
-	register double speed;
-	for (register int i = data->start ; i < data->end ; ++i)
-	{
-		if (data->p[i].t > 0)
-		{	
-			speed = DBHelper::delta * (30 + data->p[i].t) * 9;
-			data->p[i].y -= speed;
-			if (sqrt(pow(data->p[i].x - event.motion.x,2) + pow(data->p[i].y - event.motion.y,2) <= 900))
+		int radius_buffer = 0;
+		double angle;
+		for (int i = begin ; i < end ; i++)
+		{
+			if (particles[i]->y <= 0 || particles[i]->t <= 0)
 			{
-				if (data->p[i].x > event.motion.x)
+				angle = rand()%365 * 0.0174;
+				
+				if (radius_x != 0) radius_buffer = exclude_radius + rand()%radius_x;
+				particles[i]->x = center_x + cos(angle) * radius_buffer;
+				if (radius_y != 0) radius_buffer = exclude_radius + rand()%radius_y;
+				particles[i]->y = center_y + sin(angle) * radius_buffer;
+
+				particles[i]->t = 20;
+			}
+			else continue;
+		}
+	}
+	void spawn(const int& center_x, const int& center_y, const int& radius_x, const int& radius_y, const int& exclude_radius)
+	{
+		std::thread threads[threads_count];
+		for (unsigned i = 0 ; i < threads_count ; i++)	
+		{
+			threads[i] = std::thread(&Manager::spawn_part, this, particles.size() / threads_count * i, particles.size() / threads_count * (i + 1), center_x, center_y, radius_x, radius_y, exclude_radius);
+		}
+		for (unsigned i = 0 ; i < threads_count ; i++)
+		{
+			threads[i].join();
+		}
+	}
+	void draw(SDL_Renderer* renderer)
+	{
+		Uint8 green;
+		for (auto& particle : particles)
+		{
+			if (particle->t > 0)
+			{
+				green =  pow(particle->t, 2);
+				if (green > 255) green = 255;
+				SDL_SetRenderDrawColor(renderer, 255, green, 0, 0);
+				SDL_RenderDrawPoint(renderer, particle->x, particle->y);
+			}
+		}
+	}
+	void move(const SDL_Event& event, int begin, int end)
+	{
+		double speed;
+		for (int i = begin ; i < end ; i++)
+		{
+			if (particles[i]->t > 0)
+			{	
+				speed = DBHelper::delta * (30 + particles[i]->t) * 9;
+				particles[i]->y -= speed;
+				if (sqrt(pow(particles[i]->x - event.motion.x,2) + pow(particles[i]->y - event.motion.y,2) <= 900))
 				{
-					data->p[i].x = sqrt(900 - pow(data->p[i].y - event.motion.y,2)) + event.motion.x;
+					if (particles[i]->x > event.motion.x)
+					{
+						particles[i]->x = sqrt(900 - pow(particles[i]->y - event.motion.y,2)) + event.motion.x;
+					}
+					else
+					{
+						particles[i]->x = -1 * sqrt(900 - pow(particles[i]->y - event.motion.y,2)) + event.motion.x;
+
+					}
 				}
 				else
 				{
-					data->p[i].x = -1 * sqrt(900 - pow(data->p[i].y - event.motion.y,2)) + event.motion.x;
-
+					particles[i]->x = particles[i]->x + (-300 + rand()%500) * DBHelper::delta;
 				}
 			}
-			else
-			{
-				data->p[i].x = data->p[i].x + (-300 + rand()%500) * DBHelper::delta;
-			}
 		}
 	}
-}
-void check_environment(particle_storage* data)
-{
-	for (register int i = data->start ; i < data->end ; ++i)
+	void update(const SDL_Event& event)
 	{
-		int env = 0;
-		for (register int j = 0 ; j < PART_QUANT ; ++j)
+		std::thread threads[threads_count];
+		for (unsigned i = 0 ; i < threads_count ; i++)
 		{
-			if (i == j) continue;
-			if (sqrt(pow(data->p[i].x - data->p[j].x, 2) + pow(data->p[i].y - data->p[j].y, 2) <= 40))
-			{
-				env++;
-			}
+			threads[i] = std::thread(&Manager::move, this, event, i * particles.size() / threads_count, particles.size() / threads_count * (i + 1));
 		}
-		if (env == 0) data->p[i].t -= 4;
-		else if (env >= 10) ++data->p[i].t;
+		for (unsigned i = 0 ; i < threads_count ; i++)
+		{
+			threads[i].join();
+		}
 	}
-}
+
+	void check(int begin, int end)
+	{
+		for (int i = begin ; i < end ; i++)
+		{
+			int env = 0;
+			for (auto& particle : particles)
+			{
+				if (particles[i] == particle) continue;
+				if (sqrt(pow(particles[i]->x - particle->x, 2) + pow(particles[i]->y - particle->y, 2) <= 40))
+				{
+					env++;
+				}
+			}
+			if (env == 0) particles[i]->t -= 4;
+			else if (env >= 10) particles[i]->t++;
+		}
+	}
+	void check_environment()
+	{
+		std::thread threads[threads_count];
+		for (unsigned i = 0 ; i < threads_count ; i++)
+		{
+			threads[i] = std::thread(&Manager::check, this, i * particles.size() / threads_count, particles.size() / threads_count * (i + 1));
+		}
+		for (unsigned i = 0 ; i < threads_count ; i++)
+		{
+			threads[i].join();
+		}
+
+	}
+};
 
 void event_handler(SDL_Event& event, bool& isWork)
 {
@@ -139,71 +186,43 @@ void event_handler(SDL_Event& event, bool& isWork)
 	}
 }
 
-int main()
+int main(int argc, char** argv)
 {
+	if (argc != 2)
+	{
+		return 1;
+	}
 	SDL_Init(SDL_INIT_EVERYTHING);
 	SDL_Init(SDL_INIT_AUDIO);
 	Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096);
 	Mix_Music* mus = Mix_LoadMUS("../sound/fire.mp3");
 	if (mus == 0) return 1;
 
-	SDL_Window* window = SDL_CreateWindow("Title", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_FULLSCREEN);
+	SDL_Window* window = SDL_CreateWindow("Fire", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, SDL_WINDOW_FULLSCREEN);
 	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 
 	SDL_Event event;
 	
 	srand(time(NULL));
 
-	Particle particles[PART_QUANT];
-	init_particles(particles);
-
-	unsigned int threads_count = std::thread::hardware_concurrency();
-
-	std::thread threads[threads_count];
-
-	particle_storage pd[threads_count];
-	for (unsigned int i = 0 ; i < threads_count ; ++i)
-	{
-		pd[i].p = particles;
-		pd[i].start = i * PART_QUANT / threads_count;
-		pd[i].end = (i + 1) * PART_QUANT / threads_count;
-	}
-
+	Manager manager(std::stoi(argv[1]));
 
 	bool isWork = true;
 	std::thread handler(event_handler, std::ref(event), std::ref(isWork));
 	while(isWork)
 	{
 		DBHelper::begin();
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+		SDL_RenderClear(renderer);
+
 		if (Mix_PlayingMusic() == 0)
 		{
 			Mix_PlayMusic(mus, 1);
 		}
-
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-		SDL_RenderClear(renderer);	
-
-		for (unsigned int i = 0 ; i < threads_count ; i++)
-		{
-			threads[i] = std::thread(check_environment, &pd[i]);
-		}
-		for (unsigned int i = 0 ; i < threads_count ; i++)
-		{
-			threads[i].join();
-			threads[i] = std::thread(spawn_particles, &pd[i], 1920 / 2, 1080, 600, 30, 0);
-		}
-		for (unsigned int i = 0 ; i < threads_count ; i++)
-		{
-			threads[i].join();
-			threads[i] = std::thread(move_particles, &pd[i], event);
-		}
-		for (unsigned int i = 0 ; i < threads_count ; i++)
-		{
-			threads[i].join();
-		}
-
-		draw_particles(renderer, particles);
-		
+		manager.spawn(1920 / 2, 1080, 500, 50, 0);
+		manager.check_environment();
+		manager.update(event);
+		manager.draw(renderer);
 		SDL_RenderPresent(renderer);
 		DBHelper::end();
 	}
