@@ -2,7 +2,7 @@
 #include <thread>
 #include <SDL2/SDL.h>
 #include <cmath>
-#include "DeltaTime.h"
+#include "dbhelper.h"
 #include <SDL2/SDL_mixer.h>
 
 #define PART_QUANT 4800
@@ -75,7 +75,7 @@ void move_particles(particle_storage* data, const SDL_Event& event)
 	{
 		if (data->p[i].t > 0)
 		{	
-			speed = DeltaTime::delta * (30 + data->p[i].t) * 9;
+			speed = DBHelper::delta * (30 + data->p[i].t) * 9;
 			data->p[i].y -= speed;
 			if (sqrt(pow(data->p[i].x - event.motion.x,2) + pow(data->p[i].y - event.motion.y,2) <= 900))
 			{
@@ -91,7 +91,7 @@ void move_particles(particle_storage* data, const SDL_Event& event)
 			}
 			else
 			{
-				data->p[i].x = data->p[i].x + (-300 + rand()%500) * DeltaTime::delta;
+				data->p[i].x = data->p[i].x + (-300 + rand()%500) * DBHelper::delta;
 			}
 		}
 	}
@@ -169,13 +169,12 @@ int main()
 		pd[i].end = (i + 1) * PART_QUANT / threads_count;
 	}
 
-	DeltaTime dt;
 
 	bool isWork = true;
 	std::thread handler(event_handler, std::ref(event), std::ref(isWork));
 	while(isWork)
 	{
-		dt.begin();	
+		DBHelper::begin();
 		if (Mix_PlayingMusic() == 0)
 		{
 			Mix_PlayMusic(mus, 1);
@@ -206,7 +205,7 @@ int main()
 		draw_particles(renderer, particles);
 		
 		SDL_RenderPresent(renderer);
-		dt.end();
+		DBHelper::end();
 	}
 	handler.join();
 	SDL_DestroyRenderer(renderer);
